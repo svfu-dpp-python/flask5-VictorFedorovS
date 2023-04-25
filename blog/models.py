@@ -15,7 +15,6 @@ migrate = Migrate()
 def load_user(user_id):
     return User.get(user_id)
 
-
 class User(db.Model, UserMixin):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(25), nullable=False, unique=True)
@@ -27,23 +26,30 @@ class User(db.Model, UserMixin):
         return f"{self.name}"
 
     def set_password(self, password):
-        n, r, p = 16384, 16, 2
+        n, r, p = 16384, 8, 1
         salt = urandom(24)
         self.salt = f"{b64encode(salt).decode()} {n} {r} {p}"
-        self.hash = scrypt(password, salt=salt, n=n, r=r, p=p)
+        self.hash = scrypt(password.encode(), salt=salt, n=n, r=r, p=p)
 
     def check_password(self, password):
         salt, n, r, p = self.salt.split()
         salt = b64decode(salt.encode())
         n, r, p = int(n), int(r), int(p)
-        return self.hash == scrypt(password, salt=salt, n=n, r=r, p=p)
+        return self.hash == scrypt(password.encode(), salt=salt, n=n, r=r, p=p)
 
-
+class Comment(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    quest = db.Column(db.String(75), nullable=False)
+    text = db.Column(db.Text)
+    post_id = db.Column(db.Integer(), db.ForeignKey("post.id", name="post"))
+    post = db.relationship("Post", back_populates= "comments")
+    
 class Post(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(75), nullable=False)
     text = db.Column(db.Text)
     published = db.Column(db.DateTime, nullable=False)
+    comments = db.relationship('Comment', back_populates='post')
 
     def __str__(self):
         return self.title
